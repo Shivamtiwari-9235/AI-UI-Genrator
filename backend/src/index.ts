@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import { createServer as createNetServer } from 'net';
 import cors from 'cors';
 import { GenerationRequest, GenerationResponse, Version } from './types';
 import { analyzeIntent, validateIntentRequirements } from './agents/intentAnalyzer';
@@ -16,7 +17,30 @@ import { calculateDiff } from './utils/patching';
    ============================================ */
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT ? parseInt(String(process.env.PORT), 10) : 5000;
+
+async function isPortFree(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const tester = createNetServer()
+      .once('error', () => {
+        resolve(false);
+      })
+      .once('listening', () => {
+        tester.close(() => resolve(true));
+      })
+      .listen(port);
+  });
+}
+
+async function findAvailablePort(preferred: number, maxOffset = 10): Promise<number> {
+  for (let p = preferred; p <= preferred + maxOffset; p++) {
+    // eslint-disable-next-line no-await-in-loop
+    const free = await isPortFree(p);
+    if (free) return p;
+  }
+  // fallback: return 0 to let OS pick an ephemeral port
+  return 0;
+}
 
 // Middleware
 app.use(cors());
@@ -358,19 +382,38 @@ app.use((req: Request, res: Response) => {
    START SERVER
    ============================================ */
 
-app.listen(PORT, () => {
-  console.log(`\n${'='.repeat(50)}`);
-  console.log('🚀 AI UI Generator Backend');
-  console.log(`${'='.repeat(50)}`);
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log('\nAvailable endpoints:');
-  console.log('  POST   /api/generate           - Generate UI');
-  console.log('  GET    /api/versions           - List versions');
-  console.log('  GET    /api/versions/:id       - Get specific version');
-  console.log('  POST   /api/rollback/:id       - Rollback to version');
-  console.log('  POST   /api/validate-plan      - Validate plan');
-  console.log('  POST   /api/analyze-code       - Analyze generated code');
-  console.log('  GET    /api/components         - List all components');
-  console.log('  GET    /api/components/:name   - Get component schema');
-  console.log(`${'='.repeat(50)}\n`);
-});
+(async () => {
+  try {
+    const chosen = await findAvailablePort(PORT, 10);
+    const listenPort = chosen === 0 ? undefined : chosen;
+
+    const server = app.listen(listenPort, () => {
+      const actualPort = (server.address() && typeof server.address() === 'object') ? (server.address() as any).port : PORT;
+      console.log(`\n${'='.repeat(50)}`);
+      console.log('🚀 AI UI Generator Backend');
+      console.log(`${'='.repeat(50)}`);
+      console.log(`Server running on http://localhost:${actualPort}`);
+      console.log('\nAvailable endpoints:');
+      console.log('  POST   /api/generate           - Generate UI');
+      console.log('  GET    /api/versions           - List versions');
+      console.log('  GET    /api/versions/:id       - Get specific version');
+      console.log('  POST   /api/rollback/:id       - Rollback to version');
+      console.log('  POST   /api/validate-plan      - Validate plan');
+      console.log('  POST   /api/analyze-code       - Analyze generated code');
+      console.log('  GET    /api/components         - List all components');
+      console.log('  GET    /api/components/:name   - Get component schema');
+      console.log(`${'='.repeat(50)}\n`);
+    });
+    server.on('error', (err: any) => {
+      if (err && err.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} in use and fallback also failed. Start server with a free port or set PORT env var.`);
+      } else {
+        console.error('Server error:', err);
+      }
+      process.exit(1);
+    });
+  } catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
+})();
