@@ -1,6 +1,6 @@
 import { parse } from '@babel/parser';
 import traverse from '@babel/traverse';
-import type * as t from '@babel/types';
+import * as t from '@babel/types';
 
 export type ValidationError = {
   type: 'ForbiddenImport' | 'DynamicRequire' | 'EvalUsage' | 'InlineScript' | 'ForbiddenGlobal' | 'UnknownComponent' | 'UnknownProp' | 'Other';
@@ -14,18 +14,18 @@ import { componentManifest } from '../manifest/component-manifest';
 export function validateJSX(code: string) {
   const errors: ValidationError[] = [];
 
-  let ast: t.File | null = null;
+  let ast: any = null;
   try {
     ast = parse(code, {
       sourceType: 'module',
       plugins: ['jsx', 'typescript', 'classProperties', 'decorators-legacy'],
-    }) as unknown as t.File;
+    }) as any;
   } catch (err: any) {
     return { valid: false, errors: [{ type: 'Other', location: null, message: 'Parse error: ' + String(err.message) }] };
   }
 
   traverse(ast, {
-    ImportDeclaration(path) {
+    ImportDeclaration(path: any) {
       const source = path.node.source.value;
       if (!componentManifest.allowedImports.includes(source)) {
         errors.push({
@@ -36,7 +36,7 @@ export function validateJSX(code: string) {
         });
       }
     },
-    CallExpression(path) {
+    CallExpression(path: any) {
       const callee = path.node.callee;
       // detect require('...')
       if (t.isIdentifier(callee) && callee.name === 'require') {
@@ -57,7 +57,7 @@ export function validateJSX(code: string) {
         });
       }
     },
-    JSXAttribute(path) {
+    JSXAttribute(path: any) {
       const name = path.node.name;
       if (t.isJSXIdentifier(name)) {
         const attrName = name.name;
@@ -107,7 +107,7 @@ export function validateJSX(code: string) {
         }
       }
     },
-    MemberExpression(path) {
+    MemberExpression(path: any) {
       // detect window.document or global DOM access
       const object = path.node.object;
       if (t.isIdentifier(object) && (object.name === 'window' || object.name === 'document' || object.name === 'globalThis')) {
@@ -119,7 +119,7 @@ export function validateJSX(code: string) {
         });
       }
     },
-    Identifier(path) {
+    Identifier(path: any) {
       if (path.node.name === 'eval') {
         errors.push({
           type: 'EvalUsage',

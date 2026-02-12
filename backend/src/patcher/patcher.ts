@@ -1,7 +1,7 @@
 import { parse } from '@babel/parser';
 import generate from '@babel/generator';
 import traverse from '@babel/traverse';
-import type * as t from '@babel/types';
+import * as t from '@babel/types';
 
 export type PatchResult = { code: string; success: boolean; message?: string };
 
@@ -12,30 +12,30 @@ export type PatchResult = { code: string; success: boolean; message?: string };
  */
 export function applyAstPatch(oldCode: string, newCode: string): PatchResult {
   try {
-    const oldAst = parse(oldCode, { sourceType: 'module', plugins: ['jsx', 'typescript'] }) as unknown as t.File;
-    const newAst = parse(newCode, { sourceType: 'module', plugins: ['jsx', 'typescript'] }) as unknown as t.File;
+    const oldAst = parse(oldCode, { sourceType: 'module', plugins: ['jsx', 'typescript'] }) as any;
+    const newAst = parse(newCode, { sourceType: 'module', plugins: ['jsx', 'typescript'] }) as any;
 
     let replaced = false;
 
     // Find top-level JSX element in oldAst and newAst
-    let oldJSX: t.JSXElement | t.JSXFragment | null = null;
-    let newJSX: t.JSXElement | t.JSXFragment | null = null;
+    let oldJSX: any = null;
+    let newJSX: any = null;
 
     traverse(oldAst, {
-      JSXElement(path) {
+      JSXElement(path: any) {
         if (!oldJSX) oldJSX = path.node;
       },
-      JSXFragment(path) {
+      JSXFragment(path: any) {
         if (!oldJSX) oldJSX = path.node as any;
       },
       noScope: true,
     });
 
     traverse(newAst, {
-      JSXElement(path) {
+      JSXElement(path: any) {
         if (!newJSX) newJSX = path.node;
       },
-      JSXFragment(path) {
+      JSXFragment(path: any) {
         if (!newJSX) newJSX = path.node as any;
       },
       noScope: true,
@@ -43,14 +43,14 @@ export function applyAstPatch(oldCode: string, newCode: string): PatchResult {
 
     if (oldJSX && newJSX) {
       traverse(oldAst, {
-        JSXElement(path) {
+        JSXElement(path: any) {
           if (path.node === oldJSX) {
             path.replaceWith(newJSX!);
             replaced = true;
             path.stop();
           }
         },
-        JSXFragment(path) {
+        JSXFragment(path: any) {
           if (path.node === oldJSX) {
             path.replaceWith(newJSX!);
             replaced = true;
