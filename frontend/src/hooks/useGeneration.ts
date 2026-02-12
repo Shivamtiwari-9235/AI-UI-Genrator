@@ -1,22 +1,5 @@
 import { useState, useCallback } from 'react';
-
-// Resolve API base URL: prefer Vite env, fall back to localhost in dev.
-// Normalize values like ":5000" -> "http://localhost:5000" so browser fetches succeed.
-const RAW_API_BASE = ((import.meta as any)?.env?.VITE_API_BASE) || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
-
-function normalizeApiBase(raw: string) {
-  if (!raw) return '';
-  // If value like :5000, assume localhost
-  if (/^:\d+/.test(raw)) return `http://localhost${raw}`;
-  // If starts with number+colon (e.g. 127.0.0.1:5000), ensure protocol
-  if (/^\d+\.\d+\.\d+\.\d+:\d+/.test(raw) || /^localhost:\d+/.test(raw)) return `http://${raw}`;
-  // If already absolute http(s)
-  if (/^https?:\/\//.test(raw)) return raw.replace(/\/$/, '');
-  // Otherwise return as-is (could be empty or relative)
-  return raw.replace(/\/$/, '');
-}
-
-const API_BASE = normalizeApiBase(RAW_API_BASE);
+import { apiConfig } from '../config/apiConfig';
 export function useGeneration() {
   const [generation, setGeneration] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -27,11 +10,12 @@ export function useGeneration() {
     setError(null);
 
     try {
-      const url = API_BASE ? `${API_BASE}/api/generate` : `/api/generate`;
+      const url = apiConfig.endpoints.generate;
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, previousVersionId })
+        body: JSON.stringify({ message, previousVersionId }),
+        credentials: 'include'
       });
 
       // Get response text first to debug
@@ -86,7 +70,7 @@ export function useVersionHistory() {
   const fetchVersions = useCallback(async (limit: number = 10) => {
     setIsLoading(true);
     try {
-      const url = API_BASE ? `${API_BASE}/api/versions?limit=${limit}` : `/api/versions?limit=${limit}`;
+      const url = `${apiConfig.endpoints.versions}?limit=${limit}`;
       const response = await fetch(url);
       const responseText = await response.text();
       
@@ -119,7 +103,7 @@ export function useVersionHistory() {
 
   const getVersion = useCallback(async (id: string) => {
     try {
-      const response = await fetch(API_BASE ? `${API_BASE}/api/versions/${id}` : `/api/versions/${id}`);
+      const response = await fetch(apiConfig.endpoints.getVersion(id));
       const data = await response.json();
       return data.data;
     } catch (err) {
@@ -130,9 +114,10 @@ export function useVersionHistory() {
 
   const rollback = useCallback(async (versionId: string) => {
     try {
-      const response = await fetch(API_BASE ? `${API_BASE}/api/rollback/${versionId}` : `/api/rollback/${versionId}`, {
+      const response = await fetch(apiConfig.endpoints.rollback(versionId), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
       });
       const data = await response.json();
       return data.data;
@@ -152,7 +137,7 @@ export function useComponentLibrary() {
   const fetchComponents = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(API_BASE ? `${API_BASE}/api/components` : `/api/components`);
+      const response = await fetch(apiConfig.endpoints.components);
       const data = await response.json();
       setComponents(data.components || []);
       return data.components;
@@ -163,7 +148,7 @@ export function useComponentLibrary() {
 
   const getComponentSchema = useCallback(async (name: string) => {
     try {
-      const response = await fetch(API_BASE ? `${API_BASE}/api/components/${name}` : `/api/components/${name}`);
+      const response = await fetch(apiConfig.endpoints.getComponent(name));
       const data = await response.json();
       return data.schema;
     } catch (err) {

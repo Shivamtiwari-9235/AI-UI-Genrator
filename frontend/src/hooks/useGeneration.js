@@ -1,7 +1,5 @@
 import { useState, useCallback } from 'react';
-// Resolve API base URL: prefer Vite env, fall back to localhost in dev,
-// and empty string in production so relative URLs work when served from same origin.
-const API_BASE = (import.meta?.env?.VITE_API_BASE) || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:5000' : '');
+import { apiConfig } from '../config/apiConfig';
 export function useGeneration() {
     const [generation, setGeneration] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -10,10 +8,12 @@ export function useGeneration() {
         setIsLoading(true);
         setError(null);
         try {
-            const response = await fetch(`${API_BASE}/api/generate`.replace(/(^https?:)?\/\//, (m) => m || ''), {
+            const url = apiConfig.endpoints.generate;
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message, previousVersionId })
+                body: JSON.stringify({ message, previousVersionId }),
+                credentials: 'include'
             });
             // Get response text first to debug
             const responseText = await response.text();
@@ -64,7 +64,8 @@ export function useVersionHistory() {
     const fetchVersions = useCallback(async (limit = 10) => {
         setIsLoading(true);
         try {
-            const response = await fetch(`${API_BASE}/api/versions?limit=${limit}`);
+            const url = `${apiConfig.endpoints.versions}?limit=${limit}`;
+            const response = await fetch(url);
             const responseText = await response.text();
             if (!response.ok) {
                 console.error('Failed to fetch versions:', responseText);
@@ -95,7 +96,7 @@ export function useVersionHistory() {
     }, []);
     const getVersion = useCallback(async (id) => {
         try {
-            const response = await fetch(`${API_BASE}/api/versions/${id}`);
+            const response = await fetch(apiConfig.endpoints.getVersion(id));
             const data = await response.json();
             return data.data;
         }
@@ -106,9 +107,10 @@ export function useVersionHistory() {
     }, []);
     const rollback = useCallback(async (versionId) => {
         try {
-            const response = await fetch(`${API_BASE}/api/rollback/${versionId}`, {
+            const response = await fetch(apiConfig.endpoints.rollback(versionId), {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include'
             });
             const data = await response.json();
             return data.data;
@@ -126,7 +128,7 @@ export function useComponentLibrary() {
     const fetchComponents = useCallback(async () => {
         setIsLoading(true);
         try {
-            const response = await fetch(`${API_BASE}/api/components`);
+            const response = await fetch(apiConfig.endpoints.components);
             const data = await response.json();
             setComponents(data.components || []);
             return data.components;
@@ -137,7 +139,7 @@ export function useComponentLibrary() {
     }, []);
     const getComponentSchema = useCallback(async (name) => {
         try {
-            const response = await fetch(`${API_BASE}/api/components/${name}`);
+            const response = await fetch(apiConfig.endpoints.getComponent(name));
             const data = await response.json();
             return data.schema;
         }

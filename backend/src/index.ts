@@ -43,7 +43,19 @@ async function findAvailablePort(preferred: number, maxOffset = 10): Promise<num
 }
 
 // Middleware
-app.use(cors());
+// Configure CORS to allow Vercel frontend and local development
+app.use(cors({
+  origin: [
+    'https://ai-ui-genrator.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:3000'
+  ],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json({ limit: '10mb' }));
 
 // Health check
