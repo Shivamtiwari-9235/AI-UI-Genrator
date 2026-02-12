@@ -53,7 +53,6 @@ app.use(cors({
     'http://127.0.0.1:3000'
   ],
   methods: ['GET', 'POST', 'OPTIONS'],
-  credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json({ limit: '10mb' }));

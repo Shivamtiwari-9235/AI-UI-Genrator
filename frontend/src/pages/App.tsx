@@ -19,7 +19,7 @@ export const App: React.FC = () => {
   const [expandedPlan, setExpandedPlan] = useState(false);
   const [expandedExplanation, setExpandedExplanation] = useState(false);
   
-  const { generation, isLoading, error: generationError, generate } = useGeneration();
+  const { generation, isLoading, error: generationError, generate, clearError } = useGeneration();
   const { versions, fetchVersions } = useVersionHistory();
   const [currentVersionId, setCurrentVersionId] = useState<string>();
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -307,8 +307,8 @@ export const App: React.FC = () => {
 
       {/* Validation Status Modal */}
       {generationError && (
-        <div className="modal-overlay" onClick={() => {}}>
-          <div className="modal-dialog">
+        <div className="modal-overlay" onClick={clearError}>
+          <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 className="modal-title">Validation Error</h3>
             </div>
@@ -316,7 +316,7 @@ export const App: React.FC = () => {
               <Alert message={generationError} type="error" />
             </div>
             <div className="modal-footer">
-              <Button variant="primary" onClick={() => {}}>Dismiss</Button>
+              <Button variant="primary" onClick={clearError}>Dismiss</Button>
             </div>
           </div>
         </div>

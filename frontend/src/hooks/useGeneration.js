@@ -12,8 +12,7 @@ export function useGeneration() {
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message, previousVersionId }),
-                credentials: 'include'
+                body: JSON.stringify({ message, previousVersionId })
             });
             // Get response text first to debug
             const responseText = await response.text();
@@ -56,7 +55,10 @@ export function useGeneration() {
             setIsLoading(false);
         }
     }, []);
-    return { generation, isLoading, error, generate };
+    const clearError = useCallback(() => {
+        setError(null);
+    }, []);
+    return { generation, isLoading, error, generate, clearError };
 }
 export function useVersionHistory() {
     const [versions, setVersions] = useState([]);
@@ -109,8 +111,7 @@ export function useVersionHistory() {
         try {
             const response = await fetch(apiConfig.endpoints.rollback(versionId), {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include'
+                headers: { 'Content-Type': 'application/json' }
             });
             const data = await response.json();
             return data.data;
